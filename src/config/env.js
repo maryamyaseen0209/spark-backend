@@ -31,7 +31,7 @@ export const env = {
   cookieSecure: bool(process.env.COOKIE_SECURE),
   email: {
     host: clean(process.env.SMTP_HOST || process.env.SMTP_SERVER),
-    port: Number(process.env.SMTP_PORT || 587),
+    port: Number(process.env.SMTP_PORT || 465),
     secure: bool(process.env.SMTP_SECURE),
     user: clean(process.env.SMTP_USER),
     pass: clean(process.env.SMTP_PASS),

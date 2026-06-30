@@ -62,6 +62,7 @@ export const startRegistration = asyncHandler(async (req, res) => {
     email,
     verificationId: verification.id,
     emailSent: delivery.sent,
+    devCode: delivery.devCode,
   });
 });
 
@@ -128,7 +129,7 @@ export const logout = asyncHandler(async (req, res) => {
     try {
       const payload = jwt.verify(token, env.jwtRefreshSecret);
       await User.updateOne({ _id: payload.sub }, { $pull: { sessions: { _id: payload.sid } } });
-    } catch {}
+    } catch { }
   }
   clearAuthCookies(res);
   res.json({ success: true, message: 'Logged out successfully' });

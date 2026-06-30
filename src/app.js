@@ -59,6 +59,25 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/resources', resourceRoutes);
 
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    service: 'Study SparkAI API',
+    status: 'ok',
+    phase: 1,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    service: 'Study SparkAI API',
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use(notFoundHandler);
 app.use(errorHandler);
 

@@ -6,7 +6,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 dotenv.config();
 
-const clean = (value) => (typeof value === 'string' ? value.trim() : value);
+const clean = (value) => {
+  if (typeof value !== 'string') return value;
+  let trimmed = value.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
 const bool = (value, fallback = false) => (value === undefined ? fallback : String(value).trim().toLowerCase() === 'true');
 
 export const env = {

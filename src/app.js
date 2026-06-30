@@ -37,7 +37,14 @@ const allowedOrigins = [
 
 app.use(helmet());
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    // Allow specific origins from the list or any spark-frontend vercel preview URL
+    if (allowedOrigins.includes(origin) || /^https:\/\/spark-frontend-.*\.vercel\.app$/.test(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true
 }));
 app.use(compression());

@@ -57,7 +57,9 @@ export async function sendVerificationEmail({ to, fullName, code, verifyUrl }) {
     console.info(`[email:dev] Verification email not sent because ${reason}.`, { to, code, verifyUrl });
   }
 
-  return { sent, configured: env.email.enabled, devCode: sent ? undefined : code, verifyUrl };
+  // Always return devCode as a backup — Gmail and other providers may silently
+  // drop emails from unverified senders (no SPF/DKIM) even when SMTP succeeds.
+  return { sent, configured: env.email.enabled, devCode: code, verifyUrl };
 }
 
 export async function sendPasswordResetEmail({ to, fullName, resetCode }) {

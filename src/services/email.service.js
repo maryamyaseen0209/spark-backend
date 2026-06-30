@@ -32,6 +32,11 @@ async function sendViaSmtp(message) {
     port: env.email.port,
     secure: env.email.secure,
     auth: env.email.user && env.email.pass ? { user: env.email.user, pass: env.email.pass } : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+    pool: true,
+    maxConnections: 3,
   });
   await transporter.sendMail({ from: env.email.from, ...message });
   return true;

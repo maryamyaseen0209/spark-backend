@@ -27,8 +27,19 @@ const isDevelopment = env.nodeEnv !== 'production';
 const localReadPaths = ['/api/auth/me', '/api/health', '/api/dashboard', '/api/classrooms', '/api/notifications', '/api/resources', '/api/meetings', '/api/admin'];
 const localFeaturePaths = ['/api/assignments', '/api/classrooms', '/api/dashboard', '/api/messages', '/api/meetings', '/api/notifications', '/api/quizzes', '/api/resources'];
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://spark-frontend-inky-theta.vercel.app',
+  'https://spark-frontend-gsp9dko4r-meowmeow123.vercel.app',
+  env.clientUrl,
+].filter(Boolean).map(url => url.endsWith('/') ? url.slice(0, -1) : url);
+
 app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: '2mb' }));
@@ -47,17 +58,6 @@ app.use(rateLimit({
   message: { success: false, message: 'Too many requests. Please wait a moment and try again.' },
 }));
 
-app.use('/api/health', healthRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/assignments', assignmentRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/classrooms', classroomRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/meetings', meetingRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/quizzes', quizRoutes);
-app.use('/api/resources', resourceRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -77,6 +77,19 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+
+app.use('/api/health', healthRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/classrooms', classroomRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/meetings', meetingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/resources', resourceRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

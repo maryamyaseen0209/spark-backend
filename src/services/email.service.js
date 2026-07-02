@@ -76,6 +76,7 @@ async function sendEmail(message) {
       return await sendViaResend(message);
     } catch (error) {
       console.warn('[email] Resend delivery failed:', error.message);
+      return false;
     }
   }
 

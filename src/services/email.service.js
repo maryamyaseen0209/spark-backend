@@ -32,14 +32,16 @@ async function sendViaSmtp(message) {
     port: env.email.port,
     secure: env.email.secure,
     auth: env.email.user && env.email.pass ? { user: env.email.user, pass: env.email.pass } : undefined,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-    pool: true,
-    maxConnections: 3,
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 30_000,
   });
-  await transporter.sendMail({ from: env.email.from, ...message });
-  return true;
+  try {
+    await transporter.sendMail({ from: env.email.from, ...message });
+    return true;
+  } finally {
+    transporter.close();
+  }
 }
 
 export async function sendVerificationEmail({ to, fullName, code, verifyUrl }) {

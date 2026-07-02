@@ -3,6 +3,16 @@ import { env } from '../src/config/env.js';
 const mask = (value) => (value ? 'set' : 'missing');
 
 const result = {
+  email: {
+    configured: env.email.enabled,
+    host: mask(env.email.host),
+    port: env.email.port,
+    secure: env.email.secure,
+    user: mask(env.email.user),
+    pass: mask(env.email.pass),
+    from: env.email.from,
+    smtp: 'not_checked',
+  },
   cloudinary: {
     configured: env.cloudinary.enabled,
     cloudName: mask(env.cloudinary.cloudName),
@@ -22,6 +32,31 @@ const result = {
     hostLookup: 'not_checked',
   },
 };
+
+async function checkEmail() {
+  if (!env.email.enabled) return;
+
+  const nodemailer = await import('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: env.email.host,
+    port: env.email.port,
+    secure: env.email.secure,
+    auth: env.email.user && env.email.pass ? { user: env.email.user, pass: env.email.pass } : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+  });
+
+  try {
+    await transporter.verify();
+    result.email.smtp = 'ok';
+  } catch (error) {
+    result.email.smtp = 'failed';
+    result.email.message = error.message;
+  } finally {
+    transporter.close();
+  }
+}
 
 async function checkCloudinary() {
   if (!env.cloudinary.enabled) return;
@@ -59,5 +94,5 @@ async function checkZoom() {
   if (!hostResponse.ok) result.zoom.message = await hostResponse.text();
 }
 
-await Promise.allSettled([checkCloudinary(), checkZoom()]);
+await Promise.allSettled([checkEmail(), checkCloudinary(), checkZoom()]);
 console.log(JSON.stringify(result, null, 2));

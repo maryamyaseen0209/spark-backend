@@ -15,6 +15,11 @@ const clean = (value) => {
   return trimmed;
 };
 const bool = (value, fallback = false) => (value === undefined ? fallback : String(value).trim().toLowerCase() === 'true');
+const number = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+const smtpPort = number(process.env.SMTP_PORT, 465);
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -31,8 +36,8 @@ export const env = {
   cookieSecure: bool(process.env.COOKIE_SECURE),
   email: {
     host: clean(process.env.SMTP_HOST || process.env.SMTP_SERVER),
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: bool(process.env.SMTP_SECURE),
+    port: smtpPort,
+    secure: bool(process.env.SMTP_SECURE, smtpPort === 465),
     user: clean(process.env.SMTP_USER),
     pass: clean(process.env.SMTP_PASS),
     from: clean(process.env.SMTP_FROM) || 'Study SparkAI <no-reply@studysparkai.local>',

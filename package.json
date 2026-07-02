@@ -5,6 +5,8 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
+    
+    "test:email": "node test-email.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "check:integrations": "node scripts/check-integrations.js",

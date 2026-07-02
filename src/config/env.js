@@ -35,13 +35,15 @@ export const env = {
   passwordResetTtl: clean(process.env.PASSWORD_RESET_TTL) || '1h',
   cookieSecure: bool(process.env.COOKIE_SECURE),
   email: {
+    resendApiKey: clean(process.env.RESEND_API_KEY),
+    resendFrom: clean(process.env.RESEND_FROM),
     host: clean(process.env.SMTP_HOST || process.env.SMTP_SERVER),
     port: smtpPort,
     secure: bool(process.env.SMTP_SECURE, smtpPort === 465),
     user: clean(process.env.SMTP_USER),
     pass: clean(process.env.SMTP_PASS),
     from: clean(process.env.SMTP_FROM) || 'Study SparkAI <no-reply@studysparkai.local>',
-    enabled: Boolean(clean(process.env.SMTP_HOST || process.env.SMTP_SERVER)),
+    enabled: Boolean(clean(process.env.RESEND_API_KEY) || clean(process.env.SMTP_HOST || process.env.SMTP_SERVER)),
   },
   ai: {
     provider: 'groq',

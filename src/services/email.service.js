@@ -24,8 +24,34 @@ function zoomHostSetupTemplate({ fullName, dashboardUrl }) {
   };
 }
 
+async function sendViaResend(message) {
+  if (!env.email.resendApiKey) return false;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.email.resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: env.email.resendFrom || env.email.from,
+      to: [message.to],
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Resend delivery failed (${response.status}): ${body}`);
+  }
+
+  return true;
+}
+
 async function sendViaSmtp(message) {
-  if (!env.email.enabled) return false;
+  if (!env.email.host) return false;
   const nodemailer = await import('nodemailer');
   const transporter = nodemailer.createTransport({
     host: env.email.host,
@@ -44,18 +70,30 @@ async function sendViaSmtp(message) {
   }
 }
 
+async function sendEmail(message) {
+  if (env.email.resendApiKey) {
+    try {
+      return await sendViaResend(message);
+    } catch (error) {
+      console.warn('[email] Resend delivery failed:', error.message);
+    }
+  }
+
+  return sendViaSmtp(message);
+}
+
 export async function sendVerificationEmail({ to, fullName, code, verifyUrl }) {
   const template = verificationTemplate({ fullName, code, verifyUrl });
   let sent = false;
 
   try {
-    sent = await sendViaSmtp({ to, ...template });
+    sent = await sendEmail({ to, ...template });
   } catch (error) {
     console.warn('[email] Verification email delivery failed:', error.message);
   }
 
   if (!sent) {
-    const reason = env.email.enabled ? 'SMTP delivery failed' : 'SMTP is not configured';
+    const reason = env.email.enabled ? 'email delivery failed' : 'email delivery is not configured';
     console.info(`[email:dev] Verification email not sent because ${reason}.`, { to, code, verifyUrl });
   }
 
@@ -71,13 +109,13 @@ export async function sendPasswordResetEmail({ to, fullName, resetCode }) {
   let sent = false;
 
   try {
-    sent = await sendViaSmtp({ to, ...template });
+    sent = await sendEmail({ to, ...template });
   } catch (error) {
     console.warn('[email] Password reset email delivery failed:', error.message);
   }
 
   if (!sent) {
-    const reason = env.email.enabled ? 'SMTP delivery failed' : 'SMTP is not configured';
+    const reason = env.email.enabled ? 'email delivery failed' : 'email delivery is not configured';
     console.info(`[email:dev] Password reset email not sent because ${reason}.`, { to, resetCode });
   }
 
@@ -89,13 +127,13 @@ export async function sendZoomHostSetupEmail({ to, fullName, dashboardUrl }) {
   let sent = false;
 
   try {
-    sent = await sendViaSmtp({ to, ...template });
+    sent = await sendEmail({ to, ...template });
   } catch (error) {
     console.warn('[email] Zoom host setup email delivery failed:', error.message);
   }
 
   if (!sent) {
-    const reason = env.email.enabled ? 'SMTP delivery failed' : 'SMTP is not configured';
+    const reason = env.email.enabled ? 'email delivery failed' : 'email delivery is not configured';
     console.info(`[email:dev] Zoom host setup email not sent because ${reason}.`, { to, dashboardUrl });
   }
 

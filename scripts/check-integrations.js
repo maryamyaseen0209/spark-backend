@@ -5,12 +5,15 @@ const mask = (value) => (value ? 'set' : 'missing');
 const result = {
   email: {
     configured: env.email.enabled,
+    resendApiKey: mask(env.email.resendApiKey),
+    resendFrom: env.email.resendFrom || 'missing',
     host: mask(env.email.host),
     port: env.email.port,
     secure: env.email.secure,
     user: mask(env.email.user),
     pass: mask(env.email.pass),
     from: env.email.from,
+    resend: 'not_checked',
     smtp: 'not_checked',
   },
   cloudinary: {
@@ -33,8 +36,18 @@ const result = {
   },
 };
 
+async function checkResend() {
+  if (!env.email.resendApiKey) return;
+
+  const response = await fetch('https://api.resend.com/domains', {
+    headers: { Authorization: `Bearer ${env.email.resendApiKey}` },
+  });
+  result.email.resend = response.ok ? 'ok' : `failed_${response.status}`;
+  if (!response.ok) result.email.resendMessage = await response.text();
+}
+
 async function checkEmail() {
-  if (!env.email.enabled) return;
+  if (!env.email.host) return;
 
   const nodemailer = await import('nodemailer');
   const transporter = nodemailer.createTransport({
@@ -94,5 +107,5 @@ async function checkZoom() {
   if (!hostResponse.ok) result.zoom.message = await hostResponse.text();
 }
 
-await Promise.allSettled([checkEmail(), checkCloudinary(), checkZoom()]);
+await Promise.allSettled([checkResend(), checkEmail(), checkCloudinary(), checkZoom()]);
 console.log(JSON.stringify(result, null, 2));

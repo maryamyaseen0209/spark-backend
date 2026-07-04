@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { forgotPassword, login, logout, me, refresh, register, resetPassword, revokeSession, sessions, startRegistrationWithEmailVerification, updateProfile } from '../controllers/auth.controller.js';
+import { forgotPassword, login, logout, me, refresh, register, resetPassword, revokeSession, sessions, startRegistration, updateProfile } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { forgotPasswordValidator, loginValidator, registerValidator, resetPasswordValidator, startRegistrationValidator, updateProfileValidator } from '../validators/auth.validators.js';
 
 const router = Router();
 
-router.post('/register/start', startRegistrationValidator, validate, startRegistrationWithEmailVerification);
+router.post('/register/start', startRegistrationValidator, validate, startRegistration);
 router.post('/register', registerValidator, validate, register);
 router.post('/login', loginValidator, validate, login);
 router.post('/refresh', refresh);

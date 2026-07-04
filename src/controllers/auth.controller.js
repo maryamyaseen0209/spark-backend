@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import dns from 'dns/promises';
-import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import EmailVerification from '../models/EmailVerification.js';
 import { env } from '../config/env.js';
@@ -14,11 +13,10 @@ import { emitNotification } from '../services/realtime.service.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../services/email.service.js';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
-const publicUser = (user) => ({ id: user.id, fullName: user.fullName, email: user.email, role: user.role, status: user.status, emailVerified: user.emailVerified, institution: user.institution, securityQuestion: user.securityQuestion, avatarUrl: user.avatarUrl, bio: user.bio, preferences: user.preferences });
+const publicUser = (user) => ({ id: user.id, fullName: user.fullName, email: user.email, role: user.role, status: user.status, emailVerified: user.emailVerified, institution: user.institution, avatarUrl: user.avatarUrl, bio: user.bio, preferences: user.preferences });
 const bearerToken = (req) => req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.replace('Bearer ', '') : null;
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const createVerificationCode = () => crypto.randomInt(100000, 999999).toString();
-const normalizeSecurityAnswer = (answer) => String(answer || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 async function assertEmailDomainCanReceiveMail(email) {
   const domain = email.split('@')[1];
@@ -34,12 +32,6 @@ async function assertEmailDomainCanReceiveMail(email) {
       throw new ApiError(400, 'This email domain does not appear to exist or cannot receive email. Please use a real email address.');
     }
   }
-}
-
-async function hashSecurityAnswer(answer) {
-  const normalized = normalizeSecurityAnswer(answer);
-  if (!normalized) return undefined;
-  return bcrypt.hash(normalized, 12);
 }
 
 function authLinks(req, path, token) {
@@ -58,7 +50,7 @@ async function createSessionResponse(req, res, user, message, rememberMe = false
 }
 
 export const startRegistration = asyncHandler(async (req, res) => {
-  const { fullName, password, role, institution, securityQuestion, securityAnswer } = req.body;
+  const { fullName, password, role, institution } = req.body;
   const email = normalizeEmail(req.body.email);
   if (role === 'admin') throw new ApiError(403, 'Admin accounts must be created directly by a database administrator');
 
@@ -73,8 +65,6 @@ export const startRegistration = asyncHandler(async (req, res) => {
     password,
     role,
     institution,
-    securityQuestion,
-    securityAnswerHash: await hashSecurityAnswer(securityAnswer),
     status: 'active',
     emailVerified: true,
   });
@@ -85,7 +75,7 @@ export const startRegistration = asyncHandler(async (req, res) => {
 });
 
 export const startRegistrationWithEmailVerification = asyncHandler(async (req, res) => {
-  const { fullName, password, role, institution, securityQuestion, securityAnswer } = req.body;
+  const { fullName, password, role, institution } = req.body;
   const email = normalizeEmail(req.body.email);
   if (role === 'admin') throw new ApiError(403, 'Admin accounts must be created directly by a database administrator');
 
@@ -102,8 +92,6 @@ export const startRegistrationWithEmailVerification = asyncHandler(async (req, r
     password,
     role,
     institution,
-    securityQuestion,
-    securityAnswerHash: await hashSecurityAnswer(securityAnswer),
     codeHash: hashToken(code),
     expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   });
@@ -128,7 +116,7 @@ export const register = asyncHandler(async (req, res) => {
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, 'Email is already registered');
 
-  const verification = await EmailVerification.findOne({ email }).select('+password +securityAnswerHash').sort({ createdAt: -1 });
+  const verification = await EmailVerification.findOne({ email }).select('+password').sort({ createdAt: -1 });
   if (!verification || verification.expiresAt < new Date()) throw new ApiError(400, 'Verification code is invalid or expired');
   if (verification.attempts >= 5) throw new ApiError(429, 'Too many verification attempts. Please request a new code.');
   if (verification.codeHash !== hashToken(code)) {
@@ -143,8 +131,6 @@ export const register = asyncHandler(async (req, res) => {
     password: verification.password,
     role: verification.role,
     institution: verification.institution,
-    securityQuestion: verification.securityQuestion,
-    securityAnswerHash: verification.securityAnswerHash,
     status: 'active',
     emailVerified: true,
   });
@@ -198,15 +184,13 @@ export const me = asyncHandler(async (req, res) => {
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  const { fullName, institution = '', bio = '', preferences = {}, securityQuestion, securityAnswer } = req.body;
-  const user = await User.findById(req.user._id).select('+securityAnswerHash');
+  const { fullName, institution = '', bio = '', preferences = {} } = req.body;
+  const user = await User.findById(req.user._id);
   if (!user) throw new ApiError(404, 'User not found');
 
   user.fullName = fullName;
   user.institution = institution;
   user.bio = bio;
-  if (securityQuestion !== undefined) user.securityQuestion = securityQuestion;
-  if (securityAnswer) user.securityAnswerHash = await hashSecurityAnswer(securityAnswer);
   const currentPreferences = user.preferences?.toObject?.() || user.preferences || {};
   user.preferences = { ...currentPreferences, ...preferences };
   await user.save();
@@ -225,13 +209,12 @@ export const updateProfile = asyncHandler(async (req, res) => {
 
 export const forgotPassword = asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
-  const user = await User.findOne({ email }).select('+resetCodeHash +securityAnswerHash');
+  const user = await User.findOne({ email }).select('+resetCodeHash');
   if (!user) {
     return res.json({
       success: true,
       message: 'If an account exists, a password reset email has been sent.',
       emailSent: false,
-      securityQuestion: null,
     });
   }
 
@@ -246,13 +229,12 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     success: true,
     message: 'If an account exists, a password reset email has been sent.',
     emailSent: delivery.sent,
-    securityQuestion: user.securityAnswerHash ? user.securityQuestion : null,
     devResetCode: delivery.sent ? undefined : resetCode,
   });
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
-  const { token, email, code, securityAnswer, password } = req.body;
+  const { token, email, code, password } = req.body;
 
   if (token) {
     const payload = jwt.verify(token, env.jwtResetSecret);
@@ -267,27 +249,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const user = await User.findOne({ email: normalizedEmail }).select('+resetCodeHash +securityAnswerHash +password');
-
-  if (securityAnswer) {
-    if (!user?.securityAnswerHash) throw new ApiError(400, 'Security question reset is not set up for this account');
-
-    const answerMatches = await bcrypt.compare(normalizeSecurityAnswer(securityAnswer), user.securityAnswerHash);
-    if (!answerMatches) throw new ApiError(400, 'Security answer is incorrect');
-
-    if (await user.comparePassword(password)) {
-      throw new ApiError(400, 'Your new password must be different from your previous password');
-    }
-
-    user.password = password;
-    user.passwordResetVersion += 1;
-    user.sessions = [];
-    user.resetCodeHash = undefined;
-    user.resetCodeExpiresAt = undefined;
-    await user.save();
-    clearAuthCookies(res);
-    return res.json({ success: true, message: 'Password reset successful. Please log in again.' });
-  }
+  const user = await User.findOne({ email: normalizedEmail }).select('+resetCodeHash +password');
 
   if (!user || !user.resetCodeHash || !user.resetCodeExpiresAt || user.resetCodeExpiresAt < new Date()) {
     throw new ApiError(400, 'Invalid or expired reset code');

@@ -17,8 +17,6 @@ const userSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'suspended', 'pending'], default: 'pending', index: true },
   emailVerified: { type: Boolean, default: false },
   institution: { type: String, trim: true, maxlength: 160 },
-  securityQuestion: { type: String, trim: true, maxlength: 180 },
-  securityAnswerHash: { type: String, select: false },
   avatarUrl: String,
   bio: String,
   preferences: {

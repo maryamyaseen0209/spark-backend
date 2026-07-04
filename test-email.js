@@ -3,11 +3,14 @@ import { env } from './src/config/env.js';
 import nodemailer from 'nodemailer';
 
 async function testEmail() {
+    const recipient = process.argv[2] || env.email.user;
+
     console.log('📧 Testing Email Configuration...');
     console.log('SMTP Host:', env.email.host);
     console.log('SMTP Port:', env.email.port);
     console.log('SMTP User:', env.email.user);
     console.log('SMTP From:', env.email.from);
+    console.log('SMTP Test Recipient:', recipient);
     console.log('SMTP Enabled:', env.email.enabled);
     
     if (!env.email.enabled) {
@@ -38,7 +41,7 @@ async function testEmail() {
         console.log('📤 Sending test email...');
         const info = await transporter.sendMail({
             from: env.email.from,
-            to: env.email.user, // Send to yourself
+            to: recipient,
             subject: 'Test Email from Railway',
             html: '<h1>✅ Your email configuration is working!</h1><p>This is a test email sent from your Railway deployment.</p>'
         });

@@ -40,6 +40,29 @@ export const startRegistration = asyncHandler(async (req, res) => {
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(409, 'Email is already registered');
 
+  const user = await User.create({
+    fullName,
+    email,
+    password,
+    role,
+    institution,
+    status: 'active',
+    emailVerified: true,
+  });
+
+  await EmailVerification.deleteMany({ email });
+
+  return createSessionResponse(req, res, user, { statusCode: 201, text: 'Account created successfully. Welcome to Study SparkAI.' }, false);
+});
+
+export const startRegistrationWithEmailVerification = asyncHandler(async (req, res) => {
+  const { fullName, password, role, institution } = req.body;
+  const email = normalizeEmail(req.body.email);
+  if (role === 'admin') throw new ApiError(403, 'Admin accounts must be created directly by a database administrator');
+
+  const existing = await User.findOne({ email });
+  if (existing) throw new ApiError(409, 'Email is already registered');
+
   const code = createVerificationCode();
   await EmailVerification.deleteMany({ email });
   const verification = await EmailVerification.create({

@@ -63,8 +63,8 @@ async function sendViaSmtp(message) {
     socketTimeout: 30_000,
   });
   try {
-    await transporter.sendMail({ from: env.email.from, ...message });
-    return true;
+    const info = await transporter.sendMail({ from: env.email.from, ...message });
+    return Array.isArray(info.accepted) ? info.accepted.includes(message.to) : true;
   } finally {
     transporter.close();
   }

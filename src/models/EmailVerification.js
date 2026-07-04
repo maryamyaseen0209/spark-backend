@@ -6,6 +6,8 @@ const emailVerificationSchema = new mongoose.Schema({
   password: { type: String, required: true, select: false },
   role: { type: String, enum: ['student', 'teacher'], required: true },
   institution: { type: String, trim: true, maxlength: 160 },
+  securityQuestion: { type: String, trim: true, maxlength: 180 },
+  securityAnswerHash: { type: String, select: false },
   codeHash: { type: String, required: true },
   attempts: { type: Number, default: 0 },
   expiresAt: { type: Date, required: true, index: { expires: 0 } },

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
+import aiRoutes from './routes/ai.routes.js';
 import assignmentRoutes from './routes/assignment.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -25,26 +26,19 @@ const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDevelopment = env.nodeEnv !== 'production';
 const localReadPaths = ['/api/auth/me', '/api/health', '/api/dashboard', '/api/classrooms', '/api/notifications', '/api/resources', '/api/meetings', '/api/admin'];
-const localFeaturePaths = ['/api/assignments', '/api/classrooms', '/api/dashboard', '/api/messages', '/api/meetings', '/api/notifications', '/api/quizzes', '/api/resources'];
+const localFeaturePaths = ['/api/ai', '/api/assignments', '/api/classrooms', '/api/dashboard', '/api/messages', '/api/meetings', '/api/notifications', '/api/quizzes', '/api/resources'];
 
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://spark-frontend-inky-theta.vercel.app',
-  'https://spark-frontend-gsp9dko4r-meowmeow123.vercel.app',
+  /^https:\/\/spark-frontend-.*\.vercel\.app$/,
   env.clientUrl,
-].filter(Boolean).map(url => url.endsWith('/') ? url.slice(0, -1) : url);
+].filter(Boolean).map(url => (typeof url === 'string' && url.endsWith('/')) ? url.slice(0, -1) : url);
 
 app.use(helmet());
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    // Allow specific origins from the list or any spark-frontend vercel preview URL
-    if (allowedOrigins.includes(origin) || /^https:\/\/spark-frontend-.*\.vercel\.app$/.test(origin) || origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'), false);
-  },
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(compression());
@@ -87,6 +81,7 @@ app.get('/health', (req, res) => {
 
 
 app.use('/api/health', healthRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/auth', authRoutes);

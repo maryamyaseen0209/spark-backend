@@ -1,4 +1,4 @@
-﻿import Assignment from '../models/Assignment.js';
+import Assignment from '../models/Assignment.js';
 import Classroom from '../models/Classroom.js';
 import Quiz from '../models/Quiz.js';
 import { aiService } from '../services/ai.service.js';
@@ -22,10 +22,27 @@ export const listAssignments = asyncHandler(async (req, res) => {
 });
 
 export const generateAssignment = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'student') throw new ApiError(403, 'Only students can generate assignments');
+  if (req.user.role !== 'student') throw new ApiError(403, 'Only students can access assignments');
   const { topic, wordCount = 800, difficulty = 'intermediate', references = false } = req.body;
   const includeReferences = references === true || references === 'true' || references === 'on';
-  const raw = await aiService.generateAssignment({ topic, wordCount, difficulty, references: includeReferences });
+  
+  let documentText = '';
+  if (req.file) {
+    try {
+      const lowerName = (req.file.originalname || '').toLowerCase();
+      if (lowerName.endsWith('.docx')) {
+        const mammoth = await import('mammoth');
+        const parsed = await mammoth.default.extractRawText({ buffer: req.file.buffer });
+        documentText = parsed.value;
+      } else if (req.file.mimetype?.startsWith('text/') || lowerName.endsWith('.txt') || lowerName.endsWith('.md')) {
+        documentText = req.file.buffer.toString('utf8');
+      }
+    } catch (e) {
+      console.warn('Could not extract text from assignment attachment:', e.message);
+    }
+  }
+
+  const raw = await aiService.generateAssignment({ topic, wordCount, difficulty, references: includeReferences, documentText });
   const assignment = await Assignment.create({
     student: req.user._id,
     topic,
@@ -52,9 +69,12 @@ export const deleteAssignment = asyncHandler(async (req, res) => {
 });
 
 const normalizeQuestions = (raw, fallbackTitle) => {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw;
+  }
   try {
-    const parsed = JSON.parse(String(raw).replace(/^```json|```$/g, '').trim());
-    const items = Array.isArray(parsed) ? parsed : parsed.questions;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw.replace(/^```json|```$/g, '').trim()) : raw;
+    const items = Array.isArray(parsed) ? parsed : parsed?.questions;
     if (Array.isArray(items) && items.length) {
       return items.map((item) => {
         const options = (item.options || ['A', 'B', 'C', 'D']).map((option, index) => ({

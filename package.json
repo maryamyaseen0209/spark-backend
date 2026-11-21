@@ -5,12 +5,10 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    
-    "test:email": "node test-email.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "check:integrations": "node scripts/check-integrations.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/services/ai.service.js && node --check src/services/uploads.service.js && node --check src/services/zoom.service.js && node --check src/controllers/auth.controller.js && node --check src/controllers/dashboard.controller.js && node --check src/controllers/classroom.controller.js && node --check src/controllers/message.controller.js && node --check src/controllers/meeting.controller.js && node --check src/controllers/admin.controller.js && node --check src/controllers/notification.controller.js && node --check src/controllers/resource.controller.js && node --check src/routes/dashboard.routes.js && node --check src/routes/classroom.routes.js && node --check src/routes/message.routes.js && node --check src/routes/meeting.routes.js && node --check src/routes/admin.routes.js && node --check src/routes/notification.routes.js && node --check src/routes/resource.routes.js"
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/services/ai.service.js && node --check src/services/uploads.service.js && node --check src/services/zoom.service.js && node --check src/controllers/ai.controller.js && node --check src/routes/ai.routes.js && node --check src/controllers/auth.controller.js && node --check src/controllers/dashboard.controller.js && node --check src/controllers/classroom.controller.js && node --check src/controllers/message.controller.js && node --check src/controllers/meeting.controller.js && node --check src/controllers/admin.controller.js && node --check src/controllers/notification.controller.js && node --check src/controllers/resource.controller.js && node --check src/routes/dashboard.routes.js && node --check src/routes/classroom.routes.js && node --check src/routes/message.routes.js && node --check src/routes/meeting.routes.js && node --check src/routes/admin.routes.js && node --check src/routes/notification.routes.js && node --check src/routes/resource.routes.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

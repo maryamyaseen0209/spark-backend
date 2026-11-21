@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import multer from 'multer';
-import { deleteQuiz, generateQuizFromDocument, getAttemptResult, getQuizAnalytics, listQuizzes, publishQuiz, startQuiz, submitQuiz, updateQuiz } from '../controllers/quiz.controller.js';
+import { deleteQuiz, generateQuizFromDocument, generateQuizFromTopic, getAttemptResult, getQuizAnalytics, listQuizzes, publishQuiz, startQuiz, submitQuiz, updateQuiz } from '../controllers/quiz.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 
@@ -17,6 +17,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.use(requireAuth);
 router.get('/', listQuizzes);
 router.post('/generate-from-document', upload.single('document'), generateQuizFromDocument);
+router.post('/generate-from-topic', [body('topic').trim().isLength({ min: 2 }).withMessage('Topic is required'), body('classroom').isMongoId().withMessage('Valid classroom ID is required')], validate, generateQuizFromTopic);
 router.patch('/:id', questionValidators, validate, updateQuiz);
 router.patch('/:id/publish', publishQuiz);
 router.delete('/:id', deleteQuiz);

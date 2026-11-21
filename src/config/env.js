@@ -15,11 +15,6 @@ const clean = (value) => {
   return trimmed;
 };
 const bool = (value, fallback = false) => (value === undefined ? fallback : String(value).trim().toLowerCase() === 'true');
-const number = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-const smtpPort = number(process.env.SMTP_PORT, 465);
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -35,22 +30,20 @@ export const env = {
   passwordResetTtl: clean(process.env.PASSWORD_RESET_TTL) || '1h',
   cookieSecure: bool(process.env.COOKIE_SECURE),
   email: {
-    resendApiKey: clean(process.env.RESEND_API_KEY),
-    resendFrom: clean(process.env.RESEND_FROM),
     host: clean(process.env.SMTP_HOST || process.env.SMTP_SERVER),
-    port: smtpPort,
-    secure: bool(process.env.SMTP_SECURE, smtpPort === 465),
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: bool(process.env.SMTP_SECURE),
     user: clean(process.env.SMTP_USER),
     pass: clean(process.env.SMTP_PASS),
     from: clean(process.env.SMTP_FROM) || 'Study SparkAI <no-reply@studysparkai.local>',
-    enabled: Boolean(clean(process.env.RESEND_API_KEY) || clean(process.env.SMTP_HOST || process.env.SMTP_SERVER)),
+    enabled: Boolean(clean(process.env.SMTP_HOST || process.env.SMTP_SERVER)),
   },
   ai: {
     provider: 'groq',
     apiKey: clean(process.env.GROQ_API_KEY),
-    defaultModel: clean(process.env.GROQ_MODEL) || 'llama-3.3-70b-versatile',
-    reasoningModel: clean(process.env.GROQ_REASONING_MODEL) || 'llama-3.3-70b-versatile',
-    explanationModel: clean(process.env.GROQ_EXPLANATION_MODEL) || 'gemma2-9b-it',
+    defaultModel: clean(process.env.GROQ_MODEL) || 'openai/gpt-oss-120b',
+    reasoningModel: clean(process.env.GROQ_REASONING_MODEL) || 'openai/gpt-oss-120b',
+    explanationModel: clean(process.env.GROQ_EXPLANATION_MODEL) || 'openai/gpt-oss-20b',
   },
   cloudinary: {
     cloudName: clean(process.env.CLOUDINARY_CLOUD_NAME),

@@ -208,6 +208,61 @@ export const generateQuizFromDocument = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'AI quiz draft generated. Please preview, edit, and publish when ready.', quiz });
 });
 
+export const generateQuizFromTopic = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') throw new ApiError(403, 'Only teachers can generate quizzes');
+
+  const classroom = await Classroom.findById(req.body.classroom);
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+  if (req.user.role !== 'admin' && !classroom.teacher.equals(req.user._id)) throw new ApiError(403, 'You cannot create quizzes for this classroom');
+
+  const { title, topic, subject = '', totalQuestions = 5, difficulty = 'mixed', questionType = 'multiple-choice', durationMinutes = 30, passingScore = 60, dueAt, description } = req.body;
+  if (!topic || !String(topic).trim()) throw new ApiError(400, 'Topic is required to generate quiz questions.');
+
+  const questions = await aiService.generateQuizFromTopic({
+    topic: String(topic).trim(),
+    subject: subject || classroom.subject || 'General',
+    totalQuestions: Math.min(Math.max(Number(totalQuestions || 5), 1), 20),
+    difficulty,
+    questionType,
+  });
+
+  if (!questions.length) throw new ApiError(502, 'AI could not generate questions for this topic. Please try with a more specific topic.');
+
+  const quiz = await Quiz.create({
+    title: title || `${topic} Quiz`,
+    subject: subject || classroom.subject || 'General',
+    classroom: classroom._id,
+    teacher: req.user._id,
+    description: description || `AI generated quiz on ${topic}. Review and publish when ready.`,
+    durationMinutes: Number(durationMinutes || 30),
+    passingScore: Number(passingScore || 60),
+    dueAt: dueAt || undefined,
+    questionType: questionType || 'multiple-choice',
+    status: 'draft',
+    questions,
+    generationMetadata: { source: 'ai-topic', topic, model: aiService.models.reasoning },
+  });
+
+  const generatedMessage = await createQuizChatMessage(
+    req,
+    classroom,
+    quiz,
+    `${req.user.fullName} generated a new AI quiz draft: ${quiz.title}.`,
+    'normal',
+  );
+  await notifyQuizRecipients(
+    req,
+    classroom,
+    quiz,
+    generatedMessage._id,
+    'AI quiz draft generated',
+    `${req.user.fullName} generated ${quiz.title} for ${classroom.name}.`,
+    'announcement_posted',
+  );
+
+  res.status(201).json({ success: true, message: 'AI quiz draft generated. Preview, edit, and publish when ready.', quiz });
+});
+
 export const updateQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) throw new ApiError(404, 'Quiz not found');

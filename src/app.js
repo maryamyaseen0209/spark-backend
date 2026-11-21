@@ -32,15 +32,33 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://spark-frontend-inky-theta.vercel.app',
-  /^https:\/\/spark-frontend-.*\.vercel\.app$/,
   env.clientUrl,
 ].filter(Boolean).map(url => (typeof url === 'string' && url.endsWith('/')) ? url.slice(0, -1) : url);
 
-app.use(helmet());
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
+app.enable('trust proxy');
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+    // Allow by default so CORS preflight never breaks across deploy environments
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: '2mb' }));

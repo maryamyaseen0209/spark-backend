@@ -42,7 +42,17 @@ async function complete({ messages, model = env.ai.defaultModel, temperature = 0
         temperature,
         max_tokens: maxTokens,
       });
-      return completion.choices?.[0]?.message?.content?.trim() || '';
+      const rawContent = completion.choices?.[0]?.message?.content?.trim() || '';
+      // Clean thinking tags and messy raw LaTeX markers for clean human readability
+      let cleanContent = rawContent
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .replace(/\\\[\s*\\boxed\{([^}]+)\}\s*\\\]/g, '$1')
+        .replace(/\\\[([\s\S]*?)\\\]/g, '$1')
+        .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
+        .replace(/\\mathbf\{([^}]+)\}/g, '$1')
+        .replace(/\\text\{([^}]+)\}/g, '$1')
+        .trim();
+      return cleanContent;
     } catch (error) {
       lastError = error;
       const errStatus = error?.status || error?.statusCode;
@@ -188,19 +198,21 @@ ${references ? '- Include a References section with verified credible sources an
     }
 
     const personaInstructions = {
-      'Exam Coach': 'You are an intensive exam-prep coach. Focus on key exam questions, common student mistakes, mnemonic tricks, and high-yield scoring points.',
-      'Concept Simplifier': 'You use the Feynman technique. Explain difficult scientific, mathematical, or technical concepts in simple, vivid language with real-world analogies so anyone can grasp them immediately.',
-      'Tutor': 'You are a warm, encouraging, structured academic tutor. Provide clear step-by-step explanations, formulas where needed, and a quick practice checkpoint at the end.',
+      'Exam Coach': 'You are an intensive exam-prep coach. Focus on high-yield test points, common student traps, memory tricks, and direct scoring tips.',
+      'Concept Simplifier': 'You use the Feynman technique. Explain tough concepts in crystal-clear, vivid, everyday language with relatable real-world analogies so anyone can grasp them immediately.',
+      'Tutor': 'You are a warm, encouraging, structured academic tutor. Give friendly step-by-step explanations, simple formulas, and a quick practice checkpoint at the end.',
     }[persona] || 'You are an expert academic tutor.';
 
-    const systemPrompt = `You are Study SparkAI Tutor, a world-class AI study companion for students and educators.
+    const systemPrompt = `You are Study SparkAI Tutor, a friendly, crystal-clear, world-class academic study coach.
 ${personaInstructions}
 Active Subject: ${subject}.
 
-Formatting Guidelines:
-- Use clean Markdown with bold headers, bullet points, and code blocks with syntax highlighting where applicable.
-- For math or equations, format step-by-step clearly.
-- At the end of helpful explanations, provide a 1-sentence "Quick Recall Question" or "Pro Study Tip".`;
+Readability & Presentation Rules:
+- Write in warm, conversational, human-friendly English. Avoid robotic, overly dense textbook jargon.
+- Format equations cleanly using standard readable math notation (e.g., "Force = mass × acceleration" or "a = F / m"). Do NOT use raw LaTeX markup like \\boxed, \\mathbf, \\[, \\(, or \\text.
+- Structure your answer with clear bold headings, friendly bullet points, and short paragraphs so it is effortless to read on any screen.
+- Provide real-world intuitive examples to bring ideas to life.
+- Conclude with a helpful "💡 Quick Recall Question" or "🎯 Pro Study Tip" to cement the learning.`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -225,17 +237,17 @@ Formatting Guidelines:
     }
 
     const promptFormat = format === 'flashcards'
-      ? 'Create 5 high-yield Q&A flashcards from the text below. Format each as "**Front (Q):** ...\n**Back (A):** ..."'
+      ? 'Create 5 high-yield Q&A study flashcards. Format each cleanly as:\n**Question:** [Clear question]\n**Answer:** [Key explanation]\n---\n'
       : format === 'cheat_sheet'
-      ? 'Create a compact 1-page quick revision cheat sheet highlighting core formulas, key terms, and summary facts.'
-      : 'Provide a structured summary with: 1) Executive Summary, 2) Key Takeaways (bulleted), 3) Critical Terms & Concepts to remember.';
+      ? 'Create a clean, ultra-readable 1-page quick revision cheat sheet highlighting core terms, fundamental rules, and essential formulas using bullet points.'
+      : 'Provide a structured, human-friendly summary with: 1) Executive Summary (2-3 sentences), 2) Key Takeaways (bulleted points), 3) Critical Terms to Remember.';
 
     return complete({
       model: env.ai.defaultModel,
       temperature: 0.35,
       maxTokens: 1500,
       messages: [
-        { role: 'system', content: 'You are Study SparkAI, an expert in accelerated learning and study summarization.' },
+        { role: 'system', content: 'You are Study SparkAI, an expert in accelerated learning and clear study notes summarization. Write in natural, easy-to-read, structured English.' },
         { role: 'user', content: `${promptFormat}\n\nStudy Material:\n${text.slice(0, 30000)}` },
       ],
     });

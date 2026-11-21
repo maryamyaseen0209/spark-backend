@@ -79,6 +79,6 @@ server.on('error', (error) => {
   process.exit(1);
 });
 
-server.listen(env.port, () => {
-  logger.info(`Study SparkAI API running on port ${env.port}`);
+server.listen(env.port, '0.0.0.0', () => {
+  logger.info(`Study SparkAI API running on port ${env.port} (0.0.0.0)`);
 });
